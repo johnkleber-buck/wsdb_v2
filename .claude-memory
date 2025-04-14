@@ -1,0 +1,18 @@
+This project uses a hybrid version control approach:
+- Git for technical version control (.git/)
+- Project memory for conceptual history (.claude-project-memory.md)
+- Version control guidelines (.claude-git-guidelines.md)
+
+When making changes:
+1. Always pull latest changes before starting work
+2. Create feature branches for new components
+3. Make atomic commits with proper messages
+4. Update project memory with high-level descriptions
+5. Reference Git commits in project memory entries
+
+For remote repository operations:
+1. Always pull latest changes before starting work
+2. Create feature branches and push to origin
+3. Keep the remote repository in sync with local changes
+4. After merging, push changes to the remote repository
+5. Update project memory after significant pushes
