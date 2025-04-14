@@ -16,9 +16,18 @@ function filterUsers(users: User[], filters?: UserFilters): User[] {
       return false;
     }
     
-    // Apply location filter
-    if (filters.location && user.location !== filters.location) {
-      return false;
+    // Apply location filter with special handling for Giant Ant
+    if (filters.location) {
+      if (filters.location === "BGA") {
+        // For Giant Ant, match any of the Giant Ant location codes
+        if (user.location !== "BGA" && 
+            user.location !== "YVR" && 
+            user.location !== "Giant Ant (Vancouver)") {
+          return false;
+        }
+      } else if (user.location !== filters.location) {
+        return false;
+      }
     }
     
     // Apply role filter
@@ -26,8 +35,9 @@ function filterUsers(users: User[], filters?: UserFilters): User[] {
       return false;
     }
     
-    // Apply status filter
-    if (filters.status && user.status !== filters.status) {
+    // Apply status filter (case insensitive)
+    if (filters.status && 
+        user.status.toUpperCase() !== filters.status.toUpperCase()) {
       return false;
     }
     

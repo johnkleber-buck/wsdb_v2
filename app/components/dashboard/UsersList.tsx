@@ -92,7 +92,7 @@ export function UsersList({
       if (useOkta) {
         // Use Okta data
         try {
-          const result = await userService.getUsers(page, 5, appliedFilters, true);
+          const result = await userService.getUsers(page, 10, appliedFilters, true);
           usersData = result.data;
           console.log('UsersList: Okta data loaded:', usersData.length);
         } catch (oktaError) {
@@ -186,7 +186,7 @@ export function UsersList({
       }
       
       // Paginate
-      const pageSize = 5;
+      const pageSize = 10; // Increased from 5 to show more users per page
       const startIndex = (page - 1) * pageSize;
       const paginatedUsers = usersData.slice(startIndex, startIndex + pageSize);
       
