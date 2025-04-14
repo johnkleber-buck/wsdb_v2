@@ -1,8 +1,39 @@
 import { User, PaginatedResponse, UserFilters } from "@/app/types";
 import { apiClient, fetchPaginated } from "./api-client";
+import { oktaService } from "./okta-service";
+import { mockUsers } from "@/app/mock/data";
 
 // Constants
 const USERS_API_PATH = "/users";
+
+// Helper to filter users based on filters
+function filterUsers(users: User[], filters?: UserFilters): User[] {
+  if (!filters) return users;
+  
+  return users.filter(user => {
+    // Apply department filter
+    if (filters.department && user.department !== filters.department) {
+      return false;
+    }
+    
+    // Apply location filter
+    if (filters.location && user.location !== filters.location) {
+      return false;
+    }
+    
+    // Apply role filter
+    if (filters.role && user.role !== filters.role) {
+      return false;
+    }
+    
+    // Apply status filter
+    if (filters.status && user.status !== filters.status) {
+      return false;
+    }
+    
+    return true;
+  });
+}
 
 // User service to handle user-related API calls
 export const userService = {
@@ -10,22 +41,80 @@ export const userService = {
   async getUsers(
     page: number = 1,
     pageSize: number = 10,
-    filters?: UserFilters
+    filters?: UserFilters,
+    useOkta: boolean = false
   ): Promise<PaginatedResponse<User>> {
-    return fetchPaginated<User>(USERS_API_PATH, page, pageSize, filters);
+    try {
+      if (useOkta) {
+        // Fetch users from Okta service
+        const oktaUsers = await oktaService.getActiveUsers();
+        
+        // Apply filters
+        const filteredUsers = filterUsers(oktaUsers, filters);
+        
+        // Paginate results
+        const startIndex = (page - 1) * pageSize;
+        const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+        
+        return {
+          data: paginatedUsers,
+          total: filteredUsers.length,
+          page,
+          pageSize
+        };
+      } else {
+        // Use existing API if available, or fallback to mock data
+        try {
+          return await fetchPaginated<User>(USERS_API_PATH, page, pageSize, filters);
+        } catch (error) {
+          console.log('Using mock data because API call failed:', error);
+          
+          // Filter mock data
+          const filteredUsers = filterUsers(mockUsers, filters);
+          
+          // Paginate results
+          const startIndex = (page - 1) * pageSize;
+          const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+          
+          return {
+            data: paginatedUsers,
+            total: filteredUsers.length,
+            page,
+            pageSize
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error getting users:', error);
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize
+      };
+    }
   },
 
   // Get a single user by username
-  async getUser(username: string): Promise<User | null> {
-    const response = await apiClient.get<User>(
-      `${USERS_API_PATH}/${username}`
-    );
-    
-    if (response.error) {
+  async getUser(username: string, useOkta: boolean = false): Promise<User | null> {
+    try {
+      if (useOkta) {
+        return await oktaService.getUserByUsername(username);
+      } else {
+        // Try the API first
+        try {
+          const response = await apiClient.get<User>(`${USERS_API_PATH}/${username}`);
+          if (response.error) throw new Error(response.error);
+          return response.data;
+        } catch (error) {
+          // Fallback to mock data
+          return mockUsers.find(user => user.username === username) || null;
+        }
+      }
+    } catch (error) {
+      console.error(`Error getting user ${username}:`, error);
       return null;
     }
-    
-    return response.data;
   },
 
   // Get a user's assigned workstation

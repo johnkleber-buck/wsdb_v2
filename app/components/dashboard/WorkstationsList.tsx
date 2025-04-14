@@ -5,6 +5,7 @@ import { Workstation, WorkstationFilters } from "@/app/types";
 import { workstationService } from "@/app/services/workstation-service";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
+import { useToast } from "@/app/hooks/use-toast";
 import {
   Computer,
   Server,
@@ -17,7 +18,25 @@ import {
   RefreshCcw,
   Link2,
   Link2Off,
+  Info,
+  Edit,
+  Trash,
+  PowerOff,
+  Power,
+  Lock,
+  Unlock,
+  MoreHorizontal,
+  Check,
+  X
 } from "lucide-react";
+import { FilterDropdown } from "@/app/components/ui/filter-dropdown";
+import {
+  QuickActions,
+  QuickActionsContent,
+  QuickActionsItem,
+  QuickActionsSeparator,
+  QuickActionsTrigger,
+} from "@/app/components/ui/quick-actions";
 import {
   Table,
   TableBody,
@@ -41,6 +60,7 @@ export function WorkstationsList({
   selectedWorkstation,
   filters = {},
 }: WorkstationsListProps) {
+  const { toast } = useToast();
   const [workstations, setWorkstations] = useState<Workstation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +80,16 @@ export function WorkstationsList({
       setTimeout(() => {
         // Filter mock data based on search term
         let filteredWorkstations = [...mockWorkstations];
+        
+        // If we have a selected workstation, make sure it's up to date with the mock data
+        if (selectedWorkstation) {
+          const updatedWorkstation = mockWorkstations.find(
+            ws => ws.machineName === selectedWorkstation.machineName
+          );
+          if (updatedWorkstation) {
+            onSelectWorkstation(updatedWorkstation);
+          }
+        }
         
         if (searchTerm) {
           const term = searchTerm.toLowerCase();
@@ -107,11 +137,25 @@ export function WorkstationsList({
         setTotalPages(Math.ceil(filteredWorkstations.length / pageSize));
         setError(null);
         setLoading(false);
+        
+        // Show toast notification when data is refreshed
+        toast({
+          title: "Workstations Updated",
+          description: `Loaded ${filteredWorkstations.length} workstations`,
+          variant: "info",
+        });
       }, 500); // Simulate API delay
     } catch (err) {
       setError("Failed to load workstations");
       console.error(err);
       setLoading(false);
+      
+      // Show error toast
+      toast({
+        title: "Error",
+        description: "Failed to load workstations. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -219,52 +263,85 @@ export function WorkstationsList({
       </div>
 
       {/* Filter bar */}
-      <div className="p-2 border-b bg-slate-50/50 dark:bg-slate-800/50 flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex items-center gap-1 text-slate-500">
-          <Filter size={16} />
-          <span>Filters:</span>
+      <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-800/50 flex flex-wrap items-center gap-3 text-sm">
+        <div className="flex items-center gap-1.5 text-slate-500 mr-1">
+          <Filter size={16} className="text-slate-400" />
+          <span className="font-medium">Filters</span>
         </div>
         
-        <select 
-          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
-          value={appliedFilters.location || ""}
-          onChange={(e) => setAppliedFilters({...appliedFilters, location: e.target.value || undefined})}
-        >
-          <option value="">All Locations</option>
-          <option value="NY">New York</option>
-          <option value="LA">Los Angeles</option>
-          <option value="London">London</option>
-        </select>
+        <div className="flex flex-wrap gap-3 items-center flex-1">
+          <FilterDropdown
+            label="Location"
+            options={[
+              { value: "", label: "All Locations" },
+              { value: "NY", label: "New York" },
+              { value: "LA", label: "Los Angeles" },
+              { value: "London", label: "London" }
+            ]}
+            value={appliedFilters.location || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, location: value || undefined})}
+            placeholder="All Locations"
+            className="w-44"
+          />
+          
+          <FilterDropdown
+            label="Type"
+            options={[
+              { value: "", label: "All Types" },
+              { value: "Desktop", label: "Desktop" },
+              { value: "Laptop", label: "Laptop" },
+              { value: "VM", label: "VM" }
+            ]}
+            value={appliedFilters.type || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, type: value || undefined})}
+            placeholder="All Types"
+            className="w-40"
+          />
+          
+          <FilterDropdown
+            label="Status"
+            options={[
+              { value: "", label: "All Status" },
+              { value: "Available", label: "Available" },
+              { value: "Assigned", label: "Assigned" },
+              { value: "Maintenance", label: "Maintenance" }
+            ]}
+            value={appliedFilters.status || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, status: value || undefined})}
+            placeholder="All Status"
+            className="w-40"
+          />
+          
+          <FilterDropdown
+            label="Tier"
+            options={[
+              { value: "", label: "All Tiers" },
+              { value: "high-end", label: "High-End" },
+              { value: "mid-range", label: "Mid-Range" },
+              { value: "standard", label: "Standard" }
+            ]}
+            value={appliedFilters.tier || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, tier: value || undefined})}
+            placeholder="All Tiers"
+            className="w-40"
+          />
+        </div>
         
-        <select 
-          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
-          value={appliedFilters.type || ""}
-          onChange={(e) => setAppliedFilters({...appliedFilters, type: e.target.value || undefined})}
-        >
-          <option value="">All Types</option>
-          <option value="Desktop">Desktop</option>
-          <option value="Laptop">Laptop</option>
-          <option value="VM">VM</option>
-        </select>
-        
-        <select 
-          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
-          value={appliedFilters.status || ""}
-          onChange={(e) => setAppliedFilters({...appliedFilters, status: e.target.value || undefined})}
-        >
-          <option value="">All Status</option>
-          <option value="Available">Available</option>
-          <option value="Assigned">Assigned</option>
-          <option value="Maintenance">Maintenance</option>
-        </select>
-        
-        {Object.keys(appliedFilters).length > 0 && (
+        {Object.keys(appliedFilters).some(k => appliedFilters[k as keyof typeof appliedFilters]) && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="text-slate-500"
-            onClick={() => setAppliedFilters({})}
+            className="text-slate-500 ml-auto"
+            onClick={() => {
+              setAppliedFilters({});
+              toast({
+                title: "Filters Cleared",
+                description: "All filters have been reset",
+                variant: "info",
+              });
+            }}
           >
+            <X className="h-4 w-4 mr-1.5" />
             Clear All
           </Button>
         )}
@@ -295,6 +372,7 @@ export function WorkstationsList({
                   <TableHead>Connection</TableHead>
                   <TableHead>Last Seen</TableHead>
                   <TableHead>Assigned To</TableHead>
+                  <TableHead className="w-[50px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -303,7 +381,15 @@ export function WorkstationsList({
                     <TableRow
                       key={workstation.machineName}
                       className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedWorkstation?.machineName === workstation.machineName ? 'bg-slate-100 dark:bg-slate-800 ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
-                      onClick={() => onSelectWorkstation(workstation)}
+                      onClick={() => {
+                        onSelectWorkstation(workstation);
+                        toast({
+                          title: "Workstation Selected",
+                          description: `${workstation.machineName} (${workstation.status})`,
+                          variant: workstation.status === "Available" ? "success" : 
+                                   workstation.status === "Assigned" ? "info" : "warning",
+                        });
+                      }}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -329,11 +415,127 @@ export function WorkstationsList({
                       <TableCell>
                         {workstation.assignedTo?.username || "-"}
                       </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <QuickActions>
+                          <QuickActionsTrigger>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </QuickActionsTrigger>
+                          <QuickActionsContent align="end">
+                            <QuickActionsItem 
+                              onClick={() => {
+                                toast({
+                                  title: "View Details",
+                                  description: `Viewing details for ${workstation.machineName}`,
+                                  variant: "info",
+                                });
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Info className="h-4 w-4" />
+                              <span>View Details</span>
+                            </QuickActionsItem>
+                            
+                            {workstation.status === "Available" && (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Mark as Maintenance",
+                                    description: `${workstation.machineName} marked for maintenance`,
+                                    variant: "warning",
+                                  });
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Settings className="h-4 w-4" />
+                                <span>Mark as Maintenance</span>
+                              </QuickActionsItem>
+                            )}
+                            
+                            {workstation.status === "Maintenance" && (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Mark as Available",
+                                    description: `${workstation.machineName} marked as available`,
+                                    variant: "success",
+                                  });
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Check className="h-4 w-4" />
+                                <span>Mark as Available</span>
+                              </QuickActionsItem>
+                            )}
+                            
+                            {workstation.status === "Assigned" && (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Unassign Workstation",
+                                    description: `${workstation.machineName} unassigned from user`,
+                                    variant: "warning",
+                                  });
+                                }}
+                                className="flex items-center gap-2 text-red-500"
+                              >
+                                <Unlock className="h-4 w-4" />
+                                <span>Unassign</span>
+                              </QuickActionsItem>
+                            )}
+                            
+                            <QuickActionsSeparator />
+                            
+                            {workstation.parsecConnectionStatus === "Connected" ? (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Disconnect Parsec",
+                                    description: `Disconnected Parsec for ${workstation.machineName}`,
+                                    variant: "info",
+                                  });
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Link2Off className="h-4 w-4" />
+                                <span>Disconnect Parsec</span>
+                              </QuickActionsItem>
+                            ) : (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Connect Parsec",
+                                    description: `Connected Parsec for ${workstation.machineName}`,
+                                    variant: "success",
+                                  });
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Link2 className="h-4 w-4" />
+                                <span>Connect Parsec</span>
+                              </QuickActionsItem>
+                            )}
+                            
+                            <QuickActionsItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Power Toggle",
+                                  description: `${workstation.machineName} power toggled`,
+                                  variant: "warning",
+                                });
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <PowerOff className="h-4 w-4" />
+                              <span>Power Toggle</span>
+                            </QuickActionsItem>
+                          </QuickActionsContent>
+                        </QuickActions>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       No workstations found
                     </TableCell>
                   </TableRow>

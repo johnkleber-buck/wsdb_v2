@@ -1,0 +1,57 @@
+/* Basic styling */
+html,
+body {
+  background-color: white;
+  color: black;
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background-color: #0a0a0a;
+    color: white;
+    color-scheme: dark;
+  }
+}
+
+/* Animation keyframes */
+@keyframes in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Animation classes */
+[data-state=open] {
+  animation: in 300ms ease, fade-in 300ms ease;
+}
+
+[data-state=closed] {
+  animation: out 300ms ease, fade-out 300ms ease;
+}
+
+.animate-in {
+  animation: fade-in 200ms ease;
+}
+
+.animate-out {
+  animation: fade-out 200ms ease;
+}
+
+#root {
+  height: 100vh;
+}

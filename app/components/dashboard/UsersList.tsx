@@ -5,6 +5,9 @@ import { User, UserFilters } from "@/app/types";
 import { userService } from "@/app/services/user-service";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
+import { useToast } from "@/app/hooks/use-toast";
+import { isFeatureEnabled, FEATURES } from "@/app/lib/utils";
+import { filterOptions } from "@/app/lib/filter-options";
 import {
   User as UserIcon,
   Users,
@@ -14,8 +17,25 @@ import {
   RefreshCcw,
   Building2,
   Briefcase,
-  MapPin
+  MapPin,
+  Mail,
+  Phone,
+  Shield,
+  UserPlus,
+  UserMinus,
+  Edit,
+  MoreHorizontal,
+  Info,
+  X
 } from "lucide-react";
+import { FilterDropdown } from "@/app/components/ui/filter-dropdown";
+import {
+  QuickActions,
+  QuickActionsContent,
+  QuickActionsItem,
+  QuickActionsSeparator,
+  QuickActionsTrigger,
+} from "@/app/components/ui/quick-actions";
 import {
   Table,
   TableBody,
@@ -39,6 +59,7 @@ export function UsersList({
   selectedUser,
   filters = {},
 }: UsersListProps) {
+  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,65 +71,108 @@ export function UsersList({
   // Function to load users data
   const loadUsers = async () => {
     setLoading(true);
+    
+    // Log for debugging
+    console.log('UsersList: Loading users');
+    console.log('UsersList: Raw mock data available:', mockUsers.length > 0);
+    console.log('UsersList: First mock user:', mockUsers.length > 0 ? mockUsers[0] : 'No mock users');
+    
     try {
-      // In a real app, this would call the API
-      // const result = await userService.getUsers(page, 10, appliedFilters);
+      // Determine data source
+      const useOkta = isFeatureEnabled('USE_OKTA_DATA');
+      console.log('UsersList: Using Okta:', useOkta);
       
-      // For demo purposes, we'll use mock data
-      setTimeout(() => {
-        // Filter mock data based on search term
-        let filteredUsers = [...mockUsers];
-        
-        if (searchTerm) {
-          const term = searchTerm.toLowerCase();
-          filteredUsers = filteredUsers.filter(
-            user => 
-              user.username.toLowerCase().includes(term) ||
-              user.department.toLowerCase().includes(term) ||
-              user.role.toLowerCase().includes(term) ||
-              user.location.toLowerCase().includes(term) ||
-              (user.projectAssignment?.toLowerCase().includes(term) ?? false)
-          );
+      let usersData: User[] = [];
+      
+      if (useOkta) {
+        // Use Okta data
+        try {
+          const result = await userService.getUsers(page, 5, appliedFilters, true);
+          usersData = result.data;
+          console.log('UsersList: Okta data loaded:', usersData.length);
+        } catch (oktaError) {
+          console.error('Error loading Okta data:', oktaError);
+          toast({
+            title: "Okta Data Failed",
+            description: "Failed to load from Okta API, using mock data instead",
+            variant: "destructive",
+          });
+          // Fall back to mock data on Okta error
+          usersData = [...mockUsers];
         }
-        
-        // Apply other filters
-        if (appliedFilters.department) {
-          filteredUsers = filteredUsers.filter(
-            user => user.department === appliedFilters.department
-          );
-        }
-        
-        if (appliedFilters.location) {
-          filteredUsers = filteredUsers.filter(
-            user => user.location === appliedFilters.location
-          );
-        }
-        
-        if (appliedFilters.role) {
-          filteredUsers = filteredUsers.filter(
-            user => user.role === appliedFilters.role
-          );
-        }
-        
-        if (appliedFilters.status) {
-          filteredUsers = filteredUsers.filter(
-            user => user.status === appliedFilters.status
-          );
-        }
-        
-        // Pagination
-        const pageSize = 5;
-        const startIndex = (page - 1) * pageSize;
-        const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
-        
-        setUsers(paginatedUsers);
-        setTotalPages(Math.ceil(filteredUsers.length / pageSize));
-        setError(null);
-        setLoading(false);
-      }, 500); // Simulate API delay
+      } else {
+        // Use mock data directly
+        usersData = [...mockUsers];
+        console.log('UsersList: Using mock data directly');
+      }
+      
+      // Apply search filter if present
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        usersData = usersData.filter(
+          user => 
+            user.username.toLowerCase().includes(term) ||
+            user.department.toLowerCase().includes(term) ||
+            user.role.toLowerCase().includes(term) ||
+            user.location.toLowerCase().includes(term) ||
+            (user.projectAssignment?.toLowerCase().includes(term) ?? false)
+        );
+      }
+      
+      // Apply filters
+      if (appliedFilters.department) {
+        usersData = usersData.filter(
+          user => user.department === appliedFilters.department
+        );
+      }
+      
+      if (appliedFilters.location) {
+        usersData = usersData.filter(
+          user => user.location === appliedFilters.location
+        );
+      }
+      
+      if (appliedFilters.role) {
+        usersData = usersData.filter(
+          user => user.role === appliedFilters.role
+        );
+      }
+      
+      if (appliedFilters.status) {
+        usersData = usersData.filter(
+          user => user.status === appliedFilters.status
+        );
+      }
+      
+      // Paginate
+      const pageSize = 5;
+      const startIndex = (page - 1) * pageSize;
+      const paginatedUsers = usersData.slice(startIndex, startIndex + pageSize);
+      
+      console.log(`UsersList: Final data set size: ${usersData.length}, paginated: ${paginatedUsers.length}`);
+      
+      // Update state
+      setUsers(paginatedUsers);
+      setTotalPages(Math.ceil(usersData.length / pageSize));
+      setError(null);
+      
+      // Show toast notification
+      toast({
+        title: useOkta ? "Okta Users Loaded" : "Mock Users Loaded",
+        description: `Loaded ${paginatedUsers.length} users (page ${page} of ${Math.ceil(usersData.length / pageSize)})`,
+        variant: "info",
+      });
     } catch (err) {
+      console.error('Failed to load any user data:', err);
       setError("Failed to load users");
-      console.error(err);
+      setUsers([]);
+      
+      toast({
+        title: "Error",
+        description: "Failed to load any user data",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
     }
   };
@@ -122,6 +186,7 @@ export function UsersList({
   useEffect(() => {
     setAppliedFilters(filters);
   }, [filters]);
+  
 
   // Get status badge variant
   const getStatusVariant = (status: string) => {
@@ -183,55 +248,65 @@ export function UsersList({
       </div>
 
       {/* Filter bar */}
-      <div className="p-2 border-b bg-slate-50/50 dark:bg-slate-800/50 flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex items-center gap-1 text-slate-500">
-          <Filter size={16} />
-          <span>Filters:</span>
+      <div className="p-4 border-b bg-slate-50/50 dark:bg-slate-800/50 flex flex-wrap items-center gap-3 text-sm">
+        <div className="flex items-center gap-1.5 text-slate-500 mr-1">
+          <Filter size={16} className="text-slate-400" />
+          <span className="font-medium">Filters</span>
         </div>
         
-        <select 
-          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
-          value={appliedFilters.department || ""}
-          onChange={(e) => setAppliedFilters({...appliedFilters, department: e.target.value || undefined})}
-        >
-          <option value="">All Departments</option>
-          <option value="VFX">VFX</option>
-          <option value="Animation">Animation</option>
-          <option value="Compositing">Compositing</option>
-          <option value="Production">Production</option>
-          <option value="IT">IT</option>
-          <option value="Executive">Executive</option>
-        </select>
+        <div className="flex flex-wrap gap-3 items-center flex-1">
+          <FilterDropdown
+            label="Department"
+            options={filterOptions.departments}
+            value={appliedFilters.department || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, department: value || undefined})}
+            placeholder="All Departments"
+            className="w-44"
+          />
+          
+          <FilterDropdown
+            label="Location"
+            options={filterOptions.locations}
+            value={appliedFilters.location || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, location: value || undefined})}
+            placeholder="All Locations"
+            className="w-44"
+          />
+          
+          <FilterDropdown
+            label="Status"
+            options={filterOptions.statuses}
+            value={appliedFilters.status || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, status: value || undefined})}
+            placeholder="All Status"
+            className="w-40"
+          />
+          
+          <FilterDropdown
+            label="Role"
+            options={filterOptions.roles}
+            value={appliedFilters.role || ""}
+            onChange={(value) => setAppliedFilters({...appliedFilters, role: value || undefined})}
+            placeholder="All Roles"
+            className="w-44"
+          />
+        </div>
         
-        <select 
-          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
-          value={appliedFilters.location || ""}
-          onChange={(e) => setAppliedFilters({...appliedFilters, location: e.target.value || undefined})}
-        >
-          <option value="">All Locations</option>
-          <option value="NY">New York</option>
-          <option value="LA">Los Angeles</option>
-          <option value="London">London</option>
-        </select>
-        
-        <select 
-          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
-          value={appliedFilters.status || ""}
-          onChange={(e) => setAppliedFilters({...appliedFilters, status: e.target.value || undefined})}
-        >
-          <option value="">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-          <option value="On-Project">On Project</option>
-        </select>
-        
-        {Object.keys(appliedFilters).length > 0 && (
+        {Object.keys(appliedFilters).some(k => appliedFilters[k as keyof typeof appliedFilters]) && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="text-slate-500"
-            onClick={() => setAppliedFilters({})}
+            className="text-slate-500 ml-auto"
+            onClick={() => {
+              setAppliedFilters({});
+              toast({
+                title: "Filters Cleared",
+                description: "All user filters have been reset",
+                variant: "info",
+              });
+            }}
           >
+            <X className="h-4 w-4 mr-1.5" />
             Clear All
           </Button>
         )}
@@ -261,6 +336,7 @@ export function UsersList({
                   <TableHead>Status</TableHead>
                   <TableHead>Clearance</TableHead>
                   <TableHead>Project</TableHead>
+                  <TableHead className="w-[50px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -269,7 +345,15 @@ export function UsersList({
                     <TableRow
                       key={user.username}
                       className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedUser?.username === user.username ? 'bg-slate-100 dark:bg-slate-800 ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
-                      onClick={() => onSelectUser(user)}
+                      onClick={() => {
+                        onSelectUser(user);
+                        toast({
+                          title: "User Selected",
+                          description: `${user.username} (${user.department})`,
+                          variant: user.status.toLowerCase() === "active" ? "success" : 
+                                   user.status.toLowerCase() === "on-project" ? "info" : "default",
+                        });
+                      }}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -304,11 +388,107 @@ export function UsersList({
                           <span className="text-slate-400">-</span>
                         )}
                       </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <QuickActions>
+                          <QuickActionsTrigger>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </QuickActionsTrigger>
+                          <QuickActionsContent align="end">
+                            <QuickActionsItem 
+                              onClick={() => {
+                                toast({
+                                  title: "View User Details",
+                                  description: `Viewing details for ${user.username}`,
+                                  variant: "info",
+                                });
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Info className="h-4 w-4" />
+                              <span>View Details</span>
+                            </QuickActionsItem>
+                            
+                            <QuickActionsItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Edit User",
+                                  description: `Editing user ${user.username}`,
+                                  variant: "info",
+                                });
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span>Edit User</span>
+                            </QuickActionsItem>
+                            
+                            <QuickActionsItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Contact User",
+                                  description: `Contact info for ${user.username}`,
+                                  variant: "info",
+                                });
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Mail className="h-4 w-4" />
+                              <span>Contact User</span>
+                            </QuickActionsItem>
+                            
+                            <QuickActionsSeparator />
+                            
+                            {user.status.toLowerCase() === "active" ? (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Assign to Project",
+                                    description: `${user.username} is now ready to be assigned to a project`,
+                                    variant: "success",
+                                  });
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Briefcase className="h-4 w-4" />
+                                <span>Assign to Project</span>
+                              </QuickActionsItem>
+                            ) : (
+                              <QuickActionsItem 
+                                onClick={() => {
+                                  toast({
+                                    title: "Mark as Active",
+                                    description: `${user.username} status changed to Active`,
+                                    variant: "success",
+                                  });
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <UserPlus className="h-4 w-4" />
+                                <span>Mark as Active</span>
+                              </QuickActionsItem>
+                            )}
+                            
+                            <QuickActionsItem 
+                              onClick={() => {
+                                toast({
+                                  title: "Update Security Clearance",
+                                  description: `Security clearance for ${user.username} updated`,
+                                  variant: "warning",
+                                });
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Shield className="h-4 w-4" />
+                              <span>Update Clearance</span>
+                            </QuickActionsItem>
+                          </QuickActionsContent>
+                        </QuickActions>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -320,7 +500,7 @@ export function UsersList({
           {/* Pagination */}
           <div className="p-4 flex items-center justify-between border-t">
             <div className="text-sm text-slate-500">
-              Page {page} of {totalPages}
+              Page {page} of {totalPages > 0 ? totalPages : 1}
             </div>
             <div className="flex gap-2">
               <Button
