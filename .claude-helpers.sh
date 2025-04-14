@@ -7,10 +7,6 @@ update_project_memory() {
   local commit_hash="$(git rev-parse HEAD 2>/dev/null || echo 'no-commit')"
   local commit_msg="$(git log -1 --pretty=%B 2>/dev/null || echo 'No commit message')"
   
-  # Process description to handle newlines properly
-  # Replace \n with actual newlines
-  description=$(echo -e "$description")
-  
   # Create temporary file with new entry
   cat << INNEREOF > .temp-memory-entry
 ## $section ($(date +%Y-%m-%d))
