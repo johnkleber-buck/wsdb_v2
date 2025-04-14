@@ -14,7 +14,10 @@ import {
   History,
   Activity,
   PieChart,
-  ShieldCheck
+  ShieldCheck,
+  Check,
+  X,
+  AlertTriangle
 } from "lucide-react";
 
 // Import mock data
