@@ -129,9 +129,31 @@ export function UsersList({
       }
       
       if (appliedFilters.location) {
-        usersData = usersData.filter(
-          user => user.location === appliedFilters.location
-        );
+        console.log('Filtering by location:', appliedFilters.location);
+        
+        // Special handling for Giant Ant locations which could be BGA, YVR, or Giant Ant (Vancouver)
+        if (appliedFilters.location === "BGA") {
+          console.log('Using Giant Ant location filter logic');
+          const beforeCount = usersData.length;
+          
+          usersData = usersData.filter(
+            user => user.location === "BGA" || 
+                   user.location === "YVR" || 
+                   user.location === "Giant Ant (Vancouver)"
+          );
+          
+          console.log('Giant Ant filter results:', 
+            `${beforeCount} → ${usersData.length}`,
+            'Locations found:', usersData.map(u => u.location).join(', ')
+          );
+        } else {
+          const beforeCount = usersData.length;
+          usersData = usersData.filter(
+            user => user.location === appliedFilters.location
+          );
+          console.log(`Location filter (${appliedFilters.location}) results:`, 
+            `${beforeCount} → ${usersData.length}`);
+        }
       }
       
       if (appliedFilters.role) {
@@ -141,8 +163,16 @@ export function UsersList({
       }
       
       if (appliedFilters.status) {
+        console.log('Filtering by status:', appliedFilters.status);
+        const beforeCount = usersData.length;
+        
         usersData = usersData.filter(
-          user => user.status === appliedFilters.status
+          user => user.status.toUpperCase() === appliedFilters.status.toUpperCase()
+        );
+        
+        console.log(`Status filter (${appliedFilters.status}) results:`, 
+          `${beforeCount} → ${usersData.length}`,
+          'Statuses found:', usersData.map(u => u.status).join(', ')
         );
       }
       

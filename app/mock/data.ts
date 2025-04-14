@@ -136,6 +136,33 @@ export const mockPolicies: Policy[] = [
 // Mock users data
 export const mockUsers: User[] = [
   {
+    username: "alex.thompson",
+    department: "Design",
+    location: "BGA",
+    status: "Active",
+    securityClearance: "Secret",
+    projectAssignment: "Project Galaxy",
+    role: "Creative Director",
+  },
+  {
+    username: "morgan.lee",
+    department: "Animation",
+    location: "YVR",
+    status: "Active",
+    securityClearance: "Confidential",
+    projectAssignment: "Project Starburst",
+    role: "Lead Animator",
+  },
+  {
+    username: "robin.chen",
+    department: "Design",
+    location: "Giant Ant (Vancouver)",
+    status: "Active",
+    securityClearance: "Confidential",
+    projectAssignment: "Project Nebula",
+    role: "Art Director",
+  },
+  {
     username: "john.smith",
     department: "VFX",
     location: "NY",
