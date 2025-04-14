@@ -192,9 +192,14 @@ export function UsersList({
       
       console.log(`UsersList: Final data set size: ${usersData.length}, paginated: ${paginatedUsers.length}`);
       
+      // Calculate total pages and add debug info
+      const calculatedTotalPages = Math.ceil(usersData.length / pageSize);
+      console.log('Pagination calculation:', 
+        `${usersData.length} total users / ${pageSize} per page = ${calculatedTotalPages} pages`);
+      
       // Update state
       setUsers(paginatedUsers);
-      setTotalPages(Math.ceil(usersData.length / pageSize));
+      setTotalPages(calculatedTotalPages);
       setError(null);
       
       // Show toast notification
@@ -225,7 +230,15 @@ export function UsersList({
 
   // Update filters when prop changes
   useEffect(() => {
+    console.log('Filters changed from props:', filters);
     setAppliedFilters(filters);
+    
+    // When filtering specifically by department Animation, check counts
+    if (filters.department === "Animation") {
+      const animationUsers = mockUsers.filter(u => u.department === "Animation");
+      console.log('DEBUG - Animation users available in mock data:', animationUsers.length);
+      console.log('Animation users:', animationUsers.map(u => u.username).join(', '));
+    }
   }, [filters]);
   
 
@@ -542,20 +555,34 @@ export function UsersList({
           <div className="p-4 flex items-center justify-between border-t">
             <div className="text-sm text-slate-500">
               Page {page} of {totalPages > 0 ? totalPages : 1}
+              {FEATURES.DEBUG_MODE && (
+                <span className="ml-2 text-xs text-slate-400">
+                  ({users.length} shown of {totalPages * pageSize} total)
+                </span>
+              )}
             </div>
             <div className="flex gap-2">
               <Button
-                variant="outline"
+                variant={page > 1 ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className={page > 1 ? "bg-blue-500 hover:bg-blue-600 text-white" : ""}
+                onClick={() => {
+                  console.log('Going to previous page:', page, '->', Math.max(1, page - 1));
+                  setPage((p) => Math.max(1, p - 1));
+                }}
                 disabled={page === 1}
               >
                 Previous
               </Button>
               <Button
-                variant="outline"
+                variant={page < totalPages ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
+                className={page < totalPages ? "bg-blue-500 hover:bg-blue-600 text-white" : ""}
+                onClick={() => {
+                  console.log('Going to next page:', page, '->', (page < totalPages ? page + 1 : page));
+                  console.log('Total pages:', totalPages);
+                  setPage((p) => (p < totalPages ? p + 1 : p));
+                }}
                 disabled={page >= totalPages}
               >
                 Next
