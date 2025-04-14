@@ -19,7 +19,7 @@ import {
   Memory,
   MonitorSmartphone,
   Link2,
-  LinkOff,
+  Link2Off,
   CalendarClock
 } from "lucide-react";
 
@@ -289,7 +289,7 @@ export function AssignmentPanel({
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="flex items-center gap-1">
-                      <LinkOff size={12} /> Disconnected
+                      <Link2Off size={12} /> Disconnected
                     </Badge>
                   )}
                 </div>

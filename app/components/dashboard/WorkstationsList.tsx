@@ -16,7 +16,7 @@ import {
   Clock,
   RefreshCcw,
   Link2,
-  LinkOff,
+  Link2Off,
 } from "lucide-react";
 import {
   Table,
@@ -163,7 +163,7 @@ export function WorkstationsList({
       </Badge>
     ) : (
       <Badge variant="secondary" className="flex items-center gap-1">
-        <LinkOff size={12} /> Disconnected
+        <Link2Off size={12} /> Disconnected
       </Badge>
     );
   };
