@@ -195,7 +195,7 @@ export const filterOptions = {
     },
     {
       "value": "YVR",
-      "label": "Vancouver"
+      "label": "Giant Ant"
     },
     {
       "value": "Wild",
