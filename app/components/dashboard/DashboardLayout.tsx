@@ -38,27 +38,48 @@ export function DashboardLayout() {
   const [workstationFilters, setWorkstationFilters] = useState({});
   const [activeTab, setActiveTab] = useState("dashboard");
   const [useOktaData, setUseOktaData] = useState(FEATURES.USE_OKTA_DATA);
+  const [useBuckApi, setUseBuckApi] = useState(FEATURES.USE_BUCK_API);
   
-  // Handle data source toggle
-  const handleDataSourceToggle = (useReal: boolean) => {
+  // Handle Okta data source toggle
+  const handleOktaDataToggle = (useReal: boolean) => {
     // Update the global feature toggle
     FEATURES.USE_OKTA_DATA = useReal;
     setUseOktaData(useReal);
     
     // Show toast notification
     toast({
-      title: `Using ${useReal ? 'Okta' : 'Mock'} Data`,
-      description: `Switched to ${useReal ? 'real Okta API' : 'local mock'} data source`,
+      title: `Using ${useReal ? 'Okta' : 'Mock'} User Data`,
+      description: `Switched to ${useReal ? 'real Okta API' : 'local mock'} data source for users`,
       variant: useReal ? "success" : "info",
     });
     
     // Reset selections
     setSelectedUser(null);
-    setSelectedWorkstation(null);
     
     // Trigger refresh by updating filters
     const newUserFilters = { ...userFilters };
     setUserFilters(newUserFilters);
+  };
+  
+  // Handle BUCK API toggle
+  const handleBuckApiToggle = (useReal: boolean) => {
+    // Update the global feature toggle
+    FEATURES.USE_BUCK_API = useReal;
+    setUseBuckApi(useReal);
+    
+    // Show toast notification
+    toast({
+      title: `Using ${useReal ? 'BUCK' : 'Mock'} API`,
+      description: `Switched to ${useReal ? 'real BUCK API' : 'local mock'} data source for workstations`,
+      variant: useReal ? "success" : "info",
+    });
+    
+    // Reset selections
+    setSelectedWorkstation(null);
+    
+    // Trigger refresh by updating filters
+    const newWorkstationFilters = { ...workstationFilters };
+    setWorkstationFilters(newWorkstationFilters);
   };
 
   // Handle successful assignment
@@ -167,11 +188,21 @@ export function DashboardLayout() {
               </p>
             </div>
             
-            {/* Data Source Toggle */}
-            <DataSourceToggle 
-              onToggle={handleDataSourceToggle}
-              initialValue={useOktaData}
-            />
+            {/* Data Source Toggles */}
+            <div className="flex flex-col gap-2">
+              <DataSourceToggle 
+                type="okta"
+                onToggle={handleOktaDataToggle}
+                initialValue={useOktaData}
+                label="User Data:"
+              />
+              <DataSourceToggle 
+                type="buck"
+                onToggle={handleBuckApiToggle}
+                initialValue={useBuckApi}
+                label="Workstation Data:"
+              />
+            </div>
           </div>
           
           <Tabs value={activeTab} className="hidden">

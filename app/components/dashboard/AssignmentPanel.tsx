@@ -19,6 +19,8 @@ import {
   RefreshCcw
 } from "lucide-react";
 import { mockWorkstations } from "@/app/mock/data";
+import { buckApiService } from "@/app/services/buck-api-service";
+import { FEATURES } from "@/app/lib/utils";
 
 interface AssignmentPanelProps {
   selectedUser: User | null;
@@ -55,127 +57,208 @@ export function AssignmentPanel({
                                  
   const hasWorkstationConflict = selectedWorkstation?.status === "Maintenance";
 
-  // Simulate a policy check
-  const checkPolicyCompliance = () => {
+  // Policy check - uses BUCK API when enabled
+  const checkPolicyCompliance = async () => {
     setIsAssigning(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Mock policy checks
-      if (selectedUser && selectedWorkstation) {
-        // Location check
-        const locationMatch = selectedUser.location === selectedWorkstation.location;
-        
-        // Security clearance check for high-end workstations
-        const securityClearanceOk = !(
-          selectedWorkstation.tier === "high-end" && 
-          selectedUser.securityClearance === "Confidential"
-        );
-        
-        // Role check
-        const roleCheck = !(
-          selectedUser.role === "Freelancer" && 
-          selectedWorkstation.tier === "high-end"
-        );
-        
-        const messages = [];
-        if (!locationMatch) {
-          messages.push(`Location mismatch: User is in ${selectedUser.location} but workstation is in ${selectedWorkstation.location}.`);
+    if (selectedUser && selectedWorkstation) {
+      try {
+        if (FEATURES.USE_BUCK_API) {
+          // Use BUCK API for policy validation
+          console.log('Using BUCK API for policy validation');
+          const result = await buckApiService.validateAssignmentPolicy(
+            selectedUser.username, 
+            selectedWorkstation.machineName
+          );
+          
+          setPolicyCheck({
+            passed: result.valid,
+            messages: result.message ? [result.message] : []
+          });
+        } else {
+          // Use mock policy check
+          console.log('Using mock policy validation');
+          // Location check
+          const locationMatch = selectedUser.location === selectedWorkstation.location;
+          
+          // Security clearance check for high-end workstations
+          const securityClearanceOk = !(
+            selectedWorkstation.tier === "high-end" && 
+            selectedUser.securityClearance === "Confidential"
+          );
+          
+          // Role check
+          const roleCheck = !(
+            selectedUser.role === "Freelancer" && 
+            selectedWorkstation.tier === "high-end"
+          );
+          
+          const messages = [];
+          if (!locationMatch) {
+            messages.push(`Location mismatch: User is in ${selectedUser.location} but workstation is in ${selectedWorkstation.location}.`);
+          }
+          
+          if (!securityClearanceOk) {
+            messages.push(`Security clearance insufficient: ${selectedUser.securityClearance} clearance is not sufficient for ${selectedWorkstation.tier} workstation.`);
+          }
+          
+          if (!roleCheck) {
+            messages.push(`Role restriction: Freelancers cannot be assigned to high-end workstations.`);
+          }
+          
+          const passed = locationMatch && securityClearanceOk && roleCheck;
+          
+          setPolicyCheck({
+            passed,
+            messages
+          });
         }
-        
-        if (!securityClearanceOk) {
-          messages.push(`Security clearance insufficient: ${selectedUser.securityClearance} clearance is not sufficient for ${selectedWorkstation.tier} workstation.`);
-        }
-        
-        if (!roleCheck) {
-          messages.push(`Role restriction: Freelancers cannot be assigned to high-end workstations.`);
-        }
-        
-        const passed = locationMatch && securityClearanceOk && roleCheck;
-        
+      } catch (error) {
+        console.error('Error checking policy compliance:', error);
         setPolicyCheck({
-          passed,
-          messages
+          passed: false,
+          messages: ['Error checking policy compliance. Please try again.']
+        });
+        
+        toast({
+          title: "Policy Check Failed",
+          description: "There was an error checking policy compliance.",
+          variant: "destructive",
         });
       }
-      
-      setIsAssigning(false);
-    }, 800);
+    }
+    
+    setIsAssigning(false);
   };
   
-  // Handle assignment
-  const handleAssign = () => {
+  // Handle assignment - uses BUCK API when enabled
+  const handleAssign = async () => {
     setIsAssigning(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
       if (selectedUser && selectedWorkstation) {
-        // In a real app, this would call the workstationService.assignWorkstation API
+        let success = false;
         
-        // For demo purposes, update the mock data directly
-        const workstationIndex = mockWorkstations.findIndex(
-          ws => ws.machineName === selectedWorkstation.machineName
-        );
-        
-        if (workstationIndex !== -1) {
-          // Update the workstation in the mock data
-          mockWorkstations[workstationIndex].assignedTo = selectedUser;
-          mockWorkstations[workstationIndex].status = "Assigned";
-          mockWorkstations[workstationIndex].assignmentStartTime = new Date();
-          mockWorkstations[workstationIndex].parsecConnectionStatus = "Disconnected";
+        if (FEATURES.USE_BUCK_API) {
+          // Use BUCK API for assignment
+          console.log('Using BUCK API for workstation assignment');
+          success = await buckApiService.assignWorkstation(
+            selectedWorkstation.machineName, 
+            selectedUser.username
+          );
+        } else {
+          // Use mock data for assignment
+          console.log('Using mock workstation assignment');
+          
+          // For demo purposes, update the mock data directly
+          const workstationIndex = mockWorkstations.findIndex(
+            ws => ws.machineName === selectedWorkstation.machineName
+          );
+          
+          if (workstationIndex !== -1) {
+            // Update the workstation in the mock data
+            mockWorkstations[workstationIndex].assignedTo = selectedUser;
+            mockWorkstations[workstationIndex].status = "Assigned";
+            mockWorkstations[workstationIndex].assignmentStartTime = new Date();
+            mockWorkstations[workstationIndex].parsecConnectionStatus = "Disconnected";
+            
+            success = true;
+          }
         }
         
-        toast({
-          title: "Assignment Successful",
-          description: `${selectedUser.username} has been assigned to ${selectedWorkstation.machineName}`,
-          variant: "success",
-        });
-        
-        // Reset panel and notify parent component
-        onAssignmentComplete();
-        setPolicyCheck(null);
+        if (success) {
+          toast({
+            title: "Assignment Successful",
+            description: `${selectedUser.username} has been assigned to ${selectedWorkstation.machineName}`,
+            variant: "success",
+          });
+          
+          // Reset panel and notify parent component
+          onAssignmentComplete();
+          setPolicyCheck(null);
+        } else {
+          toast({
+            title: "Assignment Failed",
+            description: "There was an error assigning the workstation.",
+            variant: "destructive",
+          });
+        }
       }
-      
-      setIsAssigning(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Error assigning workstation:', error);
+      toast({
+        title: "Assignment Failed",
+        description: "There was an error assigning the workstation.",
+        variant: "destructive",
+      });
+    }
+    
+    setIsAssigning(false);
   };
   
-  // Handle unassignment
-  const handleUnassign = () => {
+  // Handle unassignment - uses BUCK API when enabled
+  const handleUnassign = async () => {
     setIsAssigning(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
       if (selectedWorkstation) {
-        // In a real app, this would call the workstationService.unassignWorkstation API
+        let success = false;
         
-        // For demo purposes, update the mock data directly
-        const workstationIndex = mockWorkstations.findIndex(
-          ws => ws.machineName === selectedWorkstation.machineName
-        );
-        
-        if (workstationIndex !== -1) {
-          // Update the workstation in the mock data
-          mockWorkstations[workstationIndex].assignedTo = undefined;
-          mockWorkstations[workstationIndex].status = "Available";
-          mockWorkstations[workstationIndex].assignmentStartTime = undefined;
-          mockWorkstations[workstationIndex].parsecConnectionStatus = "Disconnected";
-          mockWorkstations[workstationIndex].currentParsecUser = undefined;
+        if (FEATURES.USE_BUCK_API) {
+          // Use BUCK API for unassignment
+          console.log('Using BUCK API for workstation unassignment');
+          success = await buckApiService.unassignWorkstation(
+            selectedWorkstation.machineName
+          );
+        } else {
+          // Use mock data for unassignment
+          console.log('Using mock workstation unassignment');
+          
+          // For demo purposes, update the mock data directly
+          const workstationIndex = mockWorkstations.findIndex(
+            ws => ws.machineName === selectedWorkstation.machineName
+          );
+          
+          if (workstationIndex !== -1) {
+            // Update the workstation in the mock data
+            mockWorkstations[workstationIndex].assignedTo = undefined;
+            mockWorkstations[workstationIndex].status = "Available";
+            mockWorkstations[workstationIndex].assignmentStartTime = undefined;
+            mockWorkstations[workstationIndex].parsecConnectionStatus = "Disconnected";
+            mockWorkstations[workstationIndex].currentParsecUser = undefined;
+            
+            success = true;
+          }
         }
         
-        toast({
-          title: "Unassignment Successful",
-          description: `${selectedWorkstation.machineName} is now available`,
-          variant: "warning",
-        });
-        
-        // Reset panel and notify parent component
-        onAssignmentComplete();
-        setPolicyCheck(null);
+        if (success) {
+          toast({
+            title: "Unassignment Successful",
+            description: `${selectedWorkstation.machineName} is now available`,
+            variant: "warning",
+          });
+          
+          // Reset panel and notify parent component
+          onAssignmentComplete();
+          setPolicyCheck(null);
+        } else {
+          toast({
+            title: "Unassignment Failed",
+            description: "There was an error unassigning the workstation.",
+            variant: "destructive",
+          });
+        }
       }
-      
-      setIsAssigning(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Error unassigning workstation:', error);
+      toast({
+        title: "Unassignment Failed",
+        description: "There was an error unassigning the workstation.",
+        variant: "destructive",
+      });
+    }
+    
+    setIsAssigning(false);
   };
   
   // Handle cancel

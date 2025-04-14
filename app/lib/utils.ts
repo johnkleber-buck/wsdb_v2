@@ -28,7 +28,8 @@ export function formatRelativeTime(date: Date | undefined) {
 // Feature toggle for data source selection
 export const FEATURES = {
   USE_OKTA_DATA: false,  // Set to false to use mock data by default
-  API_BASE_URL: 'http://api.buck.local:7000',
+  USE_BUCK_API: false,   // Set to false to use mock data by default
+  API_BASE_URL: 'http://core-tools.buck.local:7000',
   DEBUG_MODE: true       // Enable debug mode for troubleshooting
 };
 

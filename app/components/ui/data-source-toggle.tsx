@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import { Badge } from "./badge";
-import { Database, CloudCog } from "lucide-react";
+import { Database, CloudCog, Server } from "lucide-react";
 import { FEATURES } from "@/app/lib/utils";
 
 interface DataSourceToggleProps {
+  type: 'okta' | 'buck';
   onToggle: (useReal: boolean) => void;
   initialValue?: boolean;
+  label?: string;
 }
 
 export function DataSourceToggle({ 
+  type,
   onToggle, 
-  initialValue = FEATURES.USE_OKTA_DATA 
+  initialValue = false,
+  label 
 }: DataSourceToggleProps) {
   const [useRealData, setUseRealData] = useState(initialValue);
   
@@ -21,6 +25,36 @@ export function DataSourceToggle({
     setUseRealData(newValue);
     onToggle(newValue);
   };
+  
+  // Determine what to display based on the toggle type
+  const getToggleDisplay = () => {
+    if (type === 'okta') {
+      return {
+        realLabel: 'Okta API',
+        mockLabel: 'Mock Users',
+        realIcon: CloudCog,
+        mockIcon: Database
+      };
+    } else if (type === 'buck') {
+      return {
+        realLabel: 'BUCK API',
+        mockLabel: 'Mock Data',
+        realIcon: Server,
+        mockIcon: Database
+      };
+    }
+    
+    // Default fallback
+    return {
+      realLabel: 'API',
+      mockLabel: 'Mock',
+      realIcon: CloudCog,
+      mockIcon: Database
+    };
+  };
+  
+  const { realLabel, mockLabel, realIcon: RealIcon, mockIcon: MockIcon } = getToggleDisplay();
+  const displayLabel = label || `${type.toUpperCase()} Data:`;
   
   return (
     <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-md border border-slate-200 dark:border-slate-700">
@@ -35,7 +69,7 @@ export function DataSourceToggle({
         />
       </button>
       
-      <span className="text-sm">Data Source:</span>
+      <span className="text-sm">{displayLabel}</span>
       
       <div className="flex gap-1">
         {useRealData ? (
@@ -43,16 +77,16 @@ export function DataSourceToggle({
             variant="success" 
             className="flex items-center gap-1 px-2 py-1"
           >
-            <CloudCog className="h-3 w-3" />
-            <span className="text-xs">Okta API</span>
+            <RealIcon className="h-3 w-3" />
+            <span className="text-xs">{realLabel}</span>
           </Badge>
         ) : (
           <Badge 
             variant="secondary" 
             className="flex items-center gap-1 px-2 py-1"
           >
-            <Database className="h-3 w-3" />
-            <span className="text-xs">Mock Data</span>
+            <MockIcon className="h-3 w-3" />
+            <span className="text-xs">{mockLabel}</span>
           </Badge>
         )}
       </div>

@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { Workstation, WorkstationFilters } from "@/app/types";
 import { workstationService } from "@/app/services/workstation-service";
+import { buckApiService } from "@/app/services/buck-api-service";
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { useToast } from "@/app/hooks/use-toast";
+import { FEATURES } from "@/app/lib/utils";
 import {
   Computer,
   Server,
@@ -72,12 +74,38 @@ export function WorkstationsList({
   // Function to load workstations data
   const loadWorkstations = async () => {
     setLoading(true);
+    const pageSize = 5;
+    
     try {
-      // In a real app, this would call the API
-      // const result = await workstationService.getWorkstations(page, 10, appliedFilters);
+      let workstationsData: Workstation[] = [];
+      const useApi = FEATURES.USE_BUCK_API;
       
-      // For demo purposes, we'll use mock data
-      setTimeout(() => {
+      if (useApi) {
+        // Use BUCK API service
+        console.log('Using BUCK API for workstations data');
+        const result = await buckApiService.getWorkstations(
+          appliedFilters, 
+          page, 
+          pageSize
+        );
+        
+        workstationsData = result.data;
+        setTotalPages(Math.ceil(result.total / pageSize));
+        
+        // If we have a selected workstation, refresh it from the API
+        if (selectedWorkstation) {
+          const updatedWorkstation = await buckApiService.getWorkstationByName(
+            selectedWorkstation.machineName
+          );
+          
+          if (updatedWorkstation) {
+            onSelectWorkstation(updatedWorkstation);
+          }
+        }
+      } else {
+        // Use mock data
+        console.log('Using mock data for workstations');
+        
         // Filter mock data based on search term
         let filteredWorkstations = [...mockWorkstations];
         
@@ -129,33 +157,69 @@ export function WorkstationsList({
         }
         
         // Pagination
-        const pageSize = 5;
         const startIndex = (page - 1) * pageSize;
-        const paginatedWorkstations = filteredWorkstations.slice(startIndex, startIndex + pageSize);
-        
-        setWorkstations(paginatedWorkstations);
+        workstationsData = filteredWorkstations.slice(startIndex, startIndex + pageSize);
         setTotalPages(Math.ceil(filteredWorkstations.length / pageSize));
-        setError(null);
-        setLoading(false);
-        
-        // Show toast notification when data is refreshed
-        toast({
-          title: "Workstations Updated",
-          description: `Loaded ${filteredWorkstations.length} workstations`,
-          variant: "info",
-        });
-      }, 500); // Simulate API delay
-    } catch (err) {
-      setError("Failed to load workstations");
-      console.error(err);
-      setLoading(false);
+      }
       
-      // Show error toast
+      setWorkstations(workstationsData);
+      setError(null);
+      
+      // Show toast notification when data is refreshed
       toast({
-        title: "Error",
-        description: "Failed to load workstations. Please try again.",
-        variant: "destructive",
+        title: "Workstations Updated",
+        description: `Using ${useApi ? 'BUCK API' : 'mock'} data`,
+        variant: "info",
       });
+    } catch (err) {
+      console.error('Error loading workstations:', err);
+      setError("Failed to load workstations");
+      
+      // Fallback to mock data if API fails
+      if (FEATURES.USE_BUCK_API) {
+        try {
+          console.log('Falling back to mock data after API error');
+          
+          // Filter and paginate mock data
+          const filteredWorkstations = mockWorkstations
+            .filter(ws => {
+              if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                if (!ws.machineName.toLowerCase().includes(term) &&
+                    !ws.type.toLowerCase().includes(term) &&
+                    !ws.location.toLowerCase().includes(term) &&
+                    !ws.tier.toLowerCase().includes(term) &&
+                    !(ws.assignedTo?.username.toLowerCase().includes(term) ?? false)) {
+                  return false;
+                }
+              }
+              
+              if (appliedFilters.status && ws.status !== appliedFilters.status) return false;
+              if (appliedFilters.location && ws.location !== appliedFilters.location) return false;
+              if (appliedFilters.type && ws.type !== appliedFilters.type) return false;
+              if (appliedFilters.tier && ws.tier !== appliedFilters.tier) return false;
+              
+              return true;
+            });
+          
+          const startIndex = (page - 1) * pageSize;
+          const paginatedWorkstations = filteredWorkstations.slice(startIndex, startIndex + pageSize);
+          
+          setWorkstations(paginatedWorkstations);
+          setTotalPages(Math.ceil(filteredWorkstations.length / pageSize));
+          setError("API error - using mock data");
+          
+          toast({
+            title: "API Error",
+            description: "Using mock data as fallback",
+            variant: "warning",
+          });
+        } catch (fallbackErr) {
+          console.error('Error using mock data fallback:', fallbackErr);
+        }
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

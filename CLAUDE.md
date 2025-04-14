@@ -23,7 +23,20 @@
   ```
   node scripts/fetch-okta-filter-options.js
   ```
-- The data source toggle in the top-right corner of the dashboard switches between mock data and Okta API data
+- The Okta data source toggle in the top-right corner of the dashboard switches between mock data and Okta API data for user information
+
+#### BUCK API Integration
+- Full API integration endpoint: `http://core-tools.buck.local:7000`
+- The BUCK API service provides comprehensive endpoints for:
+  - Workstation management
+  - Assignment tracking
+  - Policy validation
+  - User management
+  - Utilization metrics
+  - Audit logging
+- The BUCK API toggle in the top-right corner enables real API access for workstation data
+- When enabled, all workstation operations (assignments, statuses, policies) use the API
+- API failures automatically fall back to mock data to prevent UI disruption
 
 #### Filter Options
 - Filter options are stored in `app/lib/filter-options.ts`
@@ -34,8 +47,14 @@
 #### Assignment Functionality
 - The workstation assignment feature is implemented in `AssignmentPanel.tsx`
 - When a user and workstation are selected, the panel shows assignment options
-- Assignments are stored in memory during the session (refreshing the page will reset)
-- In a production environment, this would call the API endpoints in `workstation-service.ts`
+- Policy validation checks if the assignment is allowed based on defined rules
+- When BUCK API is enabled:
+  - Assignments use the `buckApiService.assignWorkstation()` endpoint
+  - Unassignments use the `buckApiService.unassignWorkstation()` endpoint
+  - Policy validation uses the `buckApiService.validateAssignmentPolicy()` endpoint
+- When using mock data:
+  - Assignments are stored in memory during the session (refreshing the page will reset)
+  - Policy validation uses local rules (location matching, security clearance, role restrictions)
 
 ### Build & Development
 - Use `npm run dev` for local development
@@ -51,3 +70,9 @@
 - If toast notifications don't work, check that `ToastProvider` is properly set up in layout.tsx
 - If filter dropdowns don't show options, run the filter options script to regenerate them
 - If Okta API data fails to load, the system will automatically fall back to mock data
+- If BUCK API fails to connect, check the API endpoint in `app/lib/utils.ts` and ensure the server is running
+- API feature toggles can be controlled in `app/lib/utils.ts`:
+  - `USE_OKTA_DATA`: Toggle Okta API integration for user data
+  - `USE_BUCK_API`: Toggle BUCK API integration for workstation management
+  - `API_BASE_URL`: Set the base URL for API endpoints
+  - `DEBUG_MODE`: Enable or disable detailed console logging
