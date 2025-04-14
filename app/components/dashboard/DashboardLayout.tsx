@@ -17,8 +17,10 @@ import {
   ShieldCheck,
   Check,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Search
 } from "lucide-react";
+import Link from "next/link";
 
 // Import mock data
 import { auditLogEntries, utilizationMetrics, mockWorkstations } from "@/app/mock/data";
@@ -59,7 +61,11 @@ export function DashboardLayout() {
           <h1 className="text-3xl font-bold">Workstation Dashboard</h1>
           <p className="text-slate-500 dark:text-slate-400">Manage and assign workstations to users</p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex items-center gap-4">
+          <Link href="/details" className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+            <Search size={16} />
+            View Detailed Records
+          </Link>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
             <TabsList className="grid grid-cols-4 w-full sm:w-auto">
               <TabsTrigger value="dashboard" className="flex items-center gap-1">
