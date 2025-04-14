@@ -16,7 +16,7 @@ import {
   Laptop, 
   Server,
   Cpu,
-  Memory,
+  MemoryStick,
   MonitorSmartphone,
   Link2,
   Link2Off,
@@ -303,7 +303,7 @@ export function AssignmentPanel({
                     <span>{selectedWorkstation.hardwareSpecs.cpuModel.split(' ').slice(-1)[0]}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Memory size={14} className="text-slate-400" />
+                    <MemoryStick size={14} className="text-slate-400" />
                     <span>{selectedWorkstation.hardwareSpecs.ram}GB RAM</span>
                   </div>
                   <div className="flex items-center gap-1.5">
