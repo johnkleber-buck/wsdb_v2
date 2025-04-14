@@ -155,7 +155,7 @@ export const filterOptions = {
     },
     {
       "value": "BGA",
-      "label": "Buck Global"
+      "label": "Giant Ant"
     },
     {
       "value": "CA",
@@ -167,7 +167,7 @@ export const filterOptions = {
     },
     {
       "value": "Giant Ant (Vancouver)",
-      "label": "Giant Ant (vancouver)"
+      "label": "Giant Ant (Vancouver)"
     },
     {
       "value": "LON",
