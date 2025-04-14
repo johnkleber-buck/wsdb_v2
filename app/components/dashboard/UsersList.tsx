@@ -4,7 +4,18 @@ import { useState, useEffect } from "react";
 import { User, UserFilters } from "@/app/types";
 import { userService } from "@/app/services/user-service";
 import { Button } from "@/app/components/ui/button";
-import { User as UserIcon, AlertCircle } from "lucide-react";
+import { Badge } from "@/app/components/ui/badge";
+import {
+  User as UserIcon,
+  Users,
+  AlertCircle,
+  Search,
+  Filter,
+  RefreshCcw,
+  Building2,
+  Briefcase,
+  MapPin
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -13,6 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/app/components/ui/table";
+
+// Import mock data
+import { mockUsers } from "@/app/mock/data";
 
 interface UsersListProps {
   onSelectUser: (user: User) => void;
@@ -30,70 +44,197 @@ export function UsersList({
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [appliedFilters, setAppliedFilters] = useState<UserFilters>(filters);
 
   // Function to load users data
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const result = await userService.getUsers(page, 10, appliedFilters);
-      setUsers(result.data);
-      setTotalPages(Math.ceil(result.total / result.pageSize));
-      setError(null);
+      // In a real app, this would call the API
+      // const result = await userService.getUsers(page, 10, appliedFilters);
+      
+      // For demo purposes, we'll use mock data
+      setTimeout(() => {
+        // Filter mock data based on search term
+        let filteredUsers = [...mockUsers];
+        
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          filteredUsers = filteredUsers.filter(
+            user => 
+              user.username.toLowerCase().includes(term) ||
+              user.department.toLowerCase().includes(term) ||
+              user.role.toLowerCase().includes(term) ||
+              user.location.toLowerCase().includes(term) ||
+              (user.projectAssignment?.toLowerCase().includes(term) ?? false)
+          );
+        }
+        
+        // Apply other filters
+        if (appliedFilters.department) {
+          filteredUsers = filteredUsers.filter(
+            user => user.department === appliedFilters.department
+          );
+        }
+        
+        if (appliedFilters.location) {
+          filteredUsers = filteredUsers.filter(
+            user => user.location === appliedFilters.location
+          );
+        }
+        
+        if (appliedFilters.role) {
+          filteredUsers = filteredUsers.filter(
+            user => user.role === appliedFilters.role
+          );
+        }
+        
+        if (appliedFilters.status) {
+          filteredUsers = filteredUsers.filter(
+            user => user.status === appliedFilters.status
+          );
+        }
+        
+        // Pagination
+        const pageSize = 5;
+        const startIndex = (page - 1) * pageSize;
+        const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+        
+        setUsers(paginatedUsers);
+        setTotalPages(Math.ceil(filteredUsers.length / pageSize));
+        setError(null);
+        setLoading(false);
+      }, 500); // Simulate API delay
     } catch (err) {
       setError("Failed to load users");
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };
 
-  // Load data when page or filters change
+  // Load data when page, search term, or filters change
   useEffect(() => {
     loadUsers();
-  }, [page, appliedFilters]);
+  }, [page, searchTerm, appliedFilters]);
 
   // Update filters when prop changes
   useEffect(() => {
     setAppliedFilters(filters);
   }, [filters]);
 
-  // Status badge component
-  const StatusBadge = ({ status }: { status: string }) => {
-    const getStatusColor = () => {
-      switch (status.toLowerCase()) {
-        case "active":
-          return "bg-green-500 text-white";
-        case "inactive":
-          return "bg-gray-500 text-white";
-        case "on-project":
-          return "bg-blue-500 text-white";
-        default:
-          return "bg-gray-300 text-gray-800";
-      }
-    };
+  // Get status badge variant
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+        return "success";
+      case "inactive":
+        return "secondary";
+      case "on-project":
+        return "info";
+      default:
+        return "secondary";
+    }
+  };
 
-    return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor()}`}
-      >
-        {status}
-      </span>
-    );
+  // Get security clearance badge
+  const getClearanceBadge = (clearance: string) => {
+    switch (clearance) {
+      case "Top Secret":
+        return <Badge variant="destructive">{clearance}</Badge>;
+      case "Secret":
+        return <Badge variant="warning">{clearance}</Badge>;
+      case "Confidential":
+        return <Badge variant="secondary">{clearance}</Badge>;
+      default:
+        return <Badge variant="outline">{clearance}</Badge>;
+    }
   };
 
   return (
-    <div className="rounded-md border">
-      <div className="p-4 flex items-center justify-between bg-slate-50 dark:bg-slate-800 border-b">
-        <h2 className="text-lg font-semibold">Users</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => loadUsers()}
-          disabled={loading}
+    <div className="rounded-lg border shadow-sm bg-white dark:bg-slate-900">
+      <div className="p-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between bg-slate-50 dark:bg-slate-800 border-b">
+        <div>
+          <h2 className="text-xl font-semibold">Users</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Browse and select users for workstation assignment</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              className="h-10 rounded-md border border-slate-300 bg-transparent pl-9 pr-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => loadUsers()}
+            disabled={loading}
+          >
+            <RefreshCcw size={16} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="p-2 border-b bg-slate-50/50 dark:bg-slate-800/50 flex flex-wrap items-center gap-2 text-sm">
+        <div className="flex items-center gap-1 text-slate-500">
+          <Filter size={16} />
+          <span>Filters:</span>
+        </div>
+        
+        <select 
+          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
+          value={appliedFilters.department || ""}
+          onChange={(e) => setAppliedFilters({...appliedFilters, department: e.target.value || undefined})}
         >
-          Refresh
-        </Button>
+          <option value="">All Departments</option>
+          <option value="VFX">VFX</option>
+          <option value="Animation">Animation</option>
+          <option value="Compositing">Compositing</option>
+          <option value="Production">Production</option>
+          <option value="IT">IT</option>
+          <option value="Executive">Executive</option>
+        </select>
+        
+        <select 
+          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
+          value={appliedFilters.location || ""}
+          onChange={(e) => setAppliedFilters({...appliedFilters, location: e.target.value || undefined})}
+        >
+          <option value="">All Locations</option>
+          <option value="NY">New York</option>
+          <option value="LA">Los Angeles</option>
+          <option value="London">London</option>
+        </select>
+        
+        <select 
+          className="h-9 rounded-md border border-slate-300 bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-50 dark:focus:ring-slate-400 dark:focus:ring-offset-slate-900"
+          value={appliedFilters.status || ""}
+          onChange={(e) => setAppliedFilters({...appliedFilters, status: e.target.value || undefined})}
+        >
+          <option value="">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="On-Project">On Project</option>
+        </select>
+        
+        {Object.keys(appliedFilters).length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-slate-500"
+            onClick={() => setAppliedFilters({})}
+          >
+            Clear All
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -104,8 +245,8 @@ export function UsersList({
       )}
 
       {loading ? (
-        <div className="p-8 flex justify-center items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100"></div>
+        <div className="p-12 flex justify-center items-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <>
@@ -118,6 +259,7 @@ export function UsersList({
                   <TableHead>Role</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Clearance</TableHead>
                   <TableHead>Project</TableHead>
                 </TableRow>
               </TableHeader>
@@ -126,29 +268,47 @@ export function UsersList({
                   users.map((user) => (
                     <TableRow
                       key={user.username}
-                      className={`cursor-pointer ${selectedUser?.username === user.username ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                      className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedUser?.username === user.username ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
                       onClick={() => onSelectUser(user)}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
-                          <UserIcon size={16} />
+                          <div className="bg-blue-100 dark:bg-blue-800 p-1.5 rounded-full">
+                            <UserIcon size={16} className="text-blue-600 dark:text-blue-200" />
+                          </div>
                           {user.username}
                         </div>
                       </TableCell>
-                      <TableCell>{user.department}</TableCell>
+                      <TableCell className="flex items-center gap-1.5">
+                        <Building2 size={16} className="text-slate-400" />
+                        {user.department}
+                      </TableCell>
                       <TableCell>{user.role}</TableCell>
-                      <TableCell>{user.location}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={user.status} />
+                      <TableCell className="flex items-center gap-1.5">
+                        <MapPin size={16} className="text-slate-400" />
+                        {user.location}
                       </TableCell>
                       <TableCell>
-                        {user.projectAssignment || "-"}
+                        <Badge variant={getStatusVariant(user.status)}>{user.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {getClearanceBadge(user.securityClearance)}
+                      </TableCell>
+                      <TableCell>
+                        {user.projectAssignment ? (
+                          <div className="flex items-center gap-1.5">
+                            <Briefcase size={16} className="text-slate-400" />
+                            {user.projectAssignment}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       No users found
                     </TableCell>
                   </TableRow>
@@ -159,7 +319,7 @@ export function UsersList({
 
           {/* Pagination */}
           <div className="p-4 flex items-center justify-between border-t">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-slate-500">
               Page {page} of {totalPages}
             </div>
             <div className="flex gap-2">
