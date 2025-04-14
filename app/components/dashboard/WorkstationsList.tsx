@@ -302,7 +302,7 @@ export function WorkstationsList({
                   workstations.map((workstation) => (
                     <TableRow
                       key={workstation.machineName}
-                      className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedWorkstation?.machineName === workstation.machineName ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                      className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedWorkstation?.machineName === workstation.machineName ? 'bg-slate-100 dark:bg-slate-800 ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
                       onClick={() => onSelectWorkstation(workstation)}
                     >
                       <TableCell className="font-medium">

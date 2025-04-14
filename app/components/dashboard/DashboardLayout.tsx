@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 // Import mock data
-import { auditLogEntries, utilizationMetrics } from "@/app/mock/data";
+import { auditLogEntries, utilizationMetrics, mockWorkstations } from "@/app/mock/data";
 
 export function DashboardLayout() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -35,6 +35,21 @@ export function DashboardLayout() {
     // Refresh workstation list
     setSelectedWorkstation(null);
     // Don't reset the user selection to allow for multiple assignments
+  };
+  
+  // Handle user selection to also select their assigned workstation if available
+  const handleUserSelect = (user: User) => {
+    setSelectedUser(user);
+    
+    // Find any workstation assigned to this user in mock data
+    // In a real app, this would use the API service
+    const assignedWorkstation = mockWorkstations.find(
+      ws => ws.assignedTo?.username === user.username
+    );
+    
+    if (assignedWorkstation) {
+      setSelectedWorkstation(assignedWorkstation);
+    }
   };
 
   return (
@@ -82,7 +97,7 @@ export function DashboardLayout() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <UsersList 
-                      onSelectUser={setSelectedUser} 
+                      onSelectUser={handleUserSelect} 
                       selectedUser={selectedUser}
                       filters={userFilters}
                     />

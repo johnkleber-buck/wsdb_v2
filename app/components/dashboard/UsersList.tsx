@@ -268,7 +268,7 @@ export function UsersList({
                   users.map((user) => (
                     <TableRow
                       key={user.username}
-                      className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedUser?.username === user.username ? 'bg-slate-100 dark:bg-slate-800' : ''}`}
+                      className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${selectedUser?.username === user.username ? 'bg-slate-100 dark:bg-slate-800 ring-2 ring-blue-500 dark:ring-blue-400' : ''}`}
                       onClick={() => onSelectUser(user)}
                     >
                       <TableCell className="font-medium">
