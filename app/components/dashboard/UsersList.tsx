@@ -86,6 +86,9 @@ export function UsersList({
       
       let usersData: User[] = [];
       
+      // Log applied filters for debugging
+      console.log('Applied filters:', JSON.stringify(appliedFilters));
+      
       if (useOkta) {
         // Use Okta data
         try {
@@ -105,7 +108,12 @@ export function UsersList({
       } else {
         // Use mock data directly
         usersData = [...mockUsers];
-        console.log('UsersList: Using mock data directly');
+        console.log('UsersList: Using mock data directly, initial count:', usersData.length);
+        
+        // Log sample data for debugging
+        if (usersData.length > 0) {
+          console.log('Sample user data:', JSON.stringify(usersData[0]));
+        }
       }
       
       // Apply search filter if present
@@ -121,59 +129,60 @@ export function UsersList({
         );
       }
       
-      // Apply filters
-      if (appliedFilters.department) {
-        usersData = usersData.filter(
-          user => user.department === appliedFilters.department
-        );
-      }
+      // Apply all filters in a single pass to see the actual dataset
+      console.log('Starting to apply all filters to', usersData.length, 'users');
       
-      if (appliedFilters.location) {
-        console.log('Filtering by location:', appliedFilters.location);
-        
-        // Special handling for Giant Ant locations which could be BGA, YVR, or Giant Ant (Vancouver)
-        if (appliedFilters.location === "BGA") {
-          console.log('Using Giant Ant location filter logic');
-          const beforeCount = usersData.length;
-          
-          usersData = usersData.filter(
-            user => user.location === "BGA" || 
-                   user.location === "YVR" || 
-                   user.location === "Giant Ant (Vancouver)"
-          );
-          
-          console.log('Giant Ant filter results:', 
-            `${beforeCount} → ${usersData.length}`,
-            'Locations found:', usersData.map(u => u.location).join(', ')
-          );
-        } else {
-          const beforeCount = usersData.length;
-          usersData = usersData.filter(
-            user => user.location === appliedFilters.location
-          );
-          console.log(`Location filter (${appliedFilters.location}) results:`, 
-            `${beforeCount} → ${usersData.length}`);
+      const originalCount = usersData.length;
+      usersData = usersData.filter(user => {
+        // Department filter
+        if (appliedFilters.department && user.department !== appliedFilters.department) {
+          return false;
         }
-      }
-      
-      if (appliedFilters.role) {
-        usersData = usersData.filter(
-          user => user.role === appliedFilters.role
-        );
-      }
-      
-      if (appliedFilters.status) {
-        console.log('Filtering by status:', appliedFilters.status);
-        const beforeCount = usersData.length;
         
-        usersData = usersData.filter(
-          user => user.status.toUpperCase() === appliedFilters.status.toUpperCase()
-        );
+        // Location filter - with special handling for Giant Ant locations
+        if (appliedFilters.location) {
+          if (appliedFilters.location === "BGA") {
+            // For Giant Ant, match any of the Giant Ant location codes
+            if (user.location !== "BGA" && 
+                user.location !== "YVR" && 
+                user.location !== "Giant Ant (Vancouver)") {
+              return false;
+            }
+          } else if (user.location !== appliedFilters.location) {
+            return false;
+          }
+        }
         
-        console.log(`Status filter (${appliedFilters.status}) results:`, 
-          `${beforeCount} → ${usersData.length}`,
-          'Statuses found:', usersData.map(u => u.status).join(', ')
-        );
+        // Role filter
+        if (appliedFilters.role && user.role !== appliedFilters.role) {
+          return false;
+        }
+        
+        // Status filter - case insensitive
+        if (appliedFilters.status && 
+            user.status.toUpperCase() !== appliedFilters.status.toUpperCase()) {
+          return false;
+        }
+        
+        // If we got here, this user passes all filters
+        return true;
+      });
+      
+      // Log detailed filter results
+      console.log(`Applied all filters: ${originalCount} → ${usersData.length} users`);
+      
+      // Log what filters were actually applied
+      const appliedFilterNames = Object.entries(appliedFilters)
+        .filter(([_, value]) => value)
+        .map(([key, value]) => `${key}:${value}`)
+        .join(', ');
+      
+      console.log('Active filters:', appliedFilterNames || 'None');
+      
+      // Log the remaining users for debugging
+      if (usersData.length > 0 && usersData.length <= 10) {
+        console.log('Matching users:', usersData.map(u => 
+          `${u.username} (${u.location}, ${u.status})`).join(', '));
       }
       
       // Paginate

@@ -163,6 +163,15 @@ export const mockUsers: User[] = [
     role: "Art Director",
   },
   {
+    username: "jordan.patel",
+    department: "Animation",
+    location: "BGA",
+    status: "Active",
+    securityClearance: "Secret",
+    projectAssignment: "Project Cosmos",
+    role: "Animation Director",
+  },
+  {
     username: "john.smith",
     department: "VFX",
     location: "NY",
