@@ -167,7 +167,7 @@ export const filterOptions = {
     },
     {
       "value": "Giant Ant (Vancouver)",
-      "label": "Giant Ant (Vancouver)"
+      "label": "Giant Ant"
     },
     {
       "value": "LON",
